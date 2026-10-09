@@ -1,0 +1,24 @@
+name: Oracle Octaves smoke
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  static-and-mock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify JavaScript syntax
+        run: |
+          node --check oracle-mock.js
+          node --check oracle-monitor.js
+          node --check tests/smoke.cjs
+      - name: Run dependency-free mock and monitor smoke tests
+        run: node tests/smoke.cjs
