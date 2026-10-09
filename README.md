@@ -96,6 +96,19 @@ Telemetry failures do not stop search, wallet, or audio. For production,
 implement privacy review, consent where appropriate, buffering/retry policy,
 and authenticated ingestion in the host.
 
+## Empirical Data Octaves (experimental)
+
+Data Octaves are operational labels, not claims of acoustics or a CPU hardware frequency law. The scripts require only standard Python 3 (Android/Termux included), without NumPy, SciPy, pip or OAuth.
+
+- research/data_octave_validation.py: five-feature measurements; train-only percentile calibration; holdout prediction compared with constant and size-only baselines. Run: python3 research/data_octave_validation.py --demo
+- research/route_timeout_experiment.py: Shannon bits per character and byte, zlib compression-size proxy, heuristic classes and an explicitly simulated queue bottleneck. Run: python3 research/route_timeout_experiment.py --measure
+
+Both scripts separate measured observations from simulated assumptions. The queue's imaginary second hardware path does NOT prove actual CPU vector instruction execution, DMA routing, processor affinity, or a speedup.
+
+The three provided sample strings are 1000, 64, and 99 bytes respectively (not 1000, 62 and 95). The quotient Shannon character entropy / byte length is not a standard measure of information density. The report retains it only as a named historical quotient, and also provides bits per observed byte and zlib compression ratio. These are estimates and proxies, not measurements of Kolmogorov complexity.
+
+Hardware-routing claims require actual specialized workloads, controlled randomized trials, trace collection, identical semantics across engines, and measured latency/timeout results. The simulated queue timing can be made to succeed or fail solely by changing assumed service rates or deadlines; that is not empirical validation.
+
 ## Audio
 
 The five keys use the browser's Web Audio oscillator at their actual displayed
