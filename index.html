@@ -76,6 +76,11 @@
     .wallet-card { grid-column: span 5; color: white; background: linear-gradient(135deg, var(--plum), #302832 75%); border: 0; }
     .radio-card { grid-column: span 5; }
     .piano-card { grid-column: span 7; }
+    .monitor-card { grid-column: 1 / -1; }
+    .monitor-readout { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    #monitor-state[data-state="burst"] { color: #8e2b25; background: #fde4dc; }
+    #monitor-state[data-state="sustained"] { color: #204c74; background: #e5f0fa; }
+    #monitor-state[data-state="active"] { color: #573283; background: #f1eaff; }
     .card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
     h2 { margin: 0; font-size: 19px; letter-spacing: -.025em; }
     .card-copy { margin: 8px 0 18px; color: var(--muted); font-size: 14px; line-height: 1.55; }
@@ -177,7 +182,7 @@
 <body>
   <div class="shell">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">∞</span><span>Oracle Octaves</span></div>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">O</span><span>Oracle Octaves</span></div>
       <a href="#workspace">Resonance workspace <span aria-hidden="true">↘</span></a>
     </header>
     <main id="workspace">
@@ -247,10 +252,17 @@
             <p class="status" id="piano-status" role="status" aria-live="polite">Choose notes with the keys or A, S, D, F, G.</p>
           </div>
         </article>
+        <article class="card monitor-card" aria-label="Oracle Monitor">
+          <div class="card-heading"><div><h2>Oracle Monitor</h2><p class="card-copy">Measured signals, event pacing, and packet states. No content leaves this page unless a host telemetry adapter is installed.</p></div><span class="badge" id="monitor-state">Idle</span></div>
+          <p class="monitor-readout" id="monitor-stats">0 observed · 0 events/sec</p>
+          <p class="monitor-readout" id="monitor-latest" role="status" aria-live="polite">Waiting for search, piano, or radio events.</p>
+        </article>
       </section>
     </main>
     <footer>Oracle Octaves · A modular resonance workspace</footer>
   </div>
+  <script src="./oracle-mock.js"></script>
+  <script src="./oracle-monitor.js"></script>
   <script>
     (() => {
       const wallet = window.OracleOctavesWallet;
@@ -265,9 +277,14 @@
       let audioContext;
       let radioTimer;
       let radioPlaying = false;
+      let phraseEventId = null;
+      let phraseSaved = false;
+      let phraseSaving = false;
+      let lastEventSerial = 0;
+      const newEventId = (type) => `${type}:${window.crypto?.randomUUID?.() || `${Date.now()}-${++lastEventSerial}-${Math.random().toString(36).slice(2)}`}`;
 
       if (wallet && typeof wallet.getBalance === "function") {
-        walletState.textContent = "●  Connected";
+        walletState.textContent = window.OracleOctavesDemo ? "●  DEMO wallet" : "●  Connected";
         Promise.resolve().then(() => wallet.getBalance()).then((balance) => {
           quantCount.textContent = String(balance);
         }).catch(() => {
