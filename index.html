@@ -259,10 +259,7 @@
           </div>
           <p class="status" id="radio-credit-note" role="status">A listening Music Quant is submitted only when a real track completes.</p>
           <div class="wave" aria-hidden="true"><i></i></div>
-          <div class="ad-slot" aria-label="Advertisement area">
-            <div><strong>Resonance partner</strong><span>Sponsored messages can appear here.</span></div>
-            <span class="ad-tag">AD</span>
-          </div>
+          <aside class="ad-slot" id="octaves-sponsored" data-control-phi-ad="1" aria-label="Sponsored piano partner" hidden></aside>
         </article>
         <article class="card oracle-card oracle-card--purple piano-card">
           <div class="card-heading">
@@ -328,6 +325,9 @@
     }).finally(() => {
     (() => {
       const wallet = window.OracleOctavesWallet;
+      if (!window.OracleOctavesDemo) {
+        void window.ControlPhi?.renderSponsoredCard?.('#octaves-sponsored','classical piano','oracle-octaves').catch(error=>console.warn('Piano partner unavailable',error));
+      }
       const walletState = document.querySelector("#wallet-state");
       const quantCount = document.querySelector("#quant-count");
       const searchStatus = document.querySelector("#search-status");
