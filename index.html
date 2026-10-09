@@ -296,45 +296,68 @@
         window.dispatchEvent(new CustomEvent(name, { detail }));
       };
 
+      let searchInFlight = false;
       searchForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         const query = searchInput.value.trim();
-        if (!query) return;
-        const searchUrl = window.QUANTAPHI_SEARCH_URL;
-        let destination;
-        if (typeof searchUrl === "string" && searchUrl) {
-          try {
-            destination = new URL(searchUrl, window.location.href);
-            if (!["http:", "https:"].includes(destination.protocol)) throw new Error("Unsupported search URL");
-            destination.searchParams.set("q", query);
-          } catch {
-            searchStatus.textContent = "The configured QuantaPhi search URL is invalid.";
-            return;
-          }
-        }
-        emit("oracle-octaves:search", { query, url: destination?.href });
-        let credited = false;
-        let creditFailed = false;
-        if (wallet && typeof wallet.creditQuants === "function") {
-          try {
-            await wallet.creditQuants(1, { reason: "search", query });
-            credited = true;
-          } catch {
-            creditFailed = true;
-          }
-          if (credited && typeof wallet.getBalance === "function") {
+        if (!query || searchInFlight) return;
+        searchInFlight = true;
+        const button = searchForm.querySelector("button[type=submit]");
+        button.disabled = true;
+        const eventId = newEventId("search");
+        try {
+          const searchUrl = window.QUANTAPHI_SEARCH_URL;
+          let destination;
+          if (typeof searchUrl === "string" && searchUrl) {
             try {
-              quantCount.textContent = String(await wallet.getBalance());
+              destination = new URL(searchUrl, window.location.href);
+              if (!["http:", "https:"].includes(destination.protocol)) throw Error("Unsupported search URL");
+              destination.searchParams.set("q", query);
             } catch {
-              quantCount.textContent = "—";
+              searchStatus.textContent = "The configured QuantaPhi search URL is invalid.";
+              return;
             }
           }
-        }
-        if (destination) window.location.assign(destination.href);
-        else if (credited) searchStatus.textContent = "Search sent · 1 quant credited.";
-        else if (creditFailed) searchStatus.textContent = "Search sent · wallet credit could not be confirmed.";
-        else if (!wallet || typeof wallet.creditQuants !== "function") {
-          searchStatus.textContent = "Search sent · connect the host wallet to receive 1 quant.";
+          emit("oracle-octaves:search", { query, eventId, url: destination?.href });
+          if (destination) {
+            searchStatus.textContent = "Opening QuantaPhi. Credits require a completed server-verified search.";
+            window.location.assign(destination.href);
+            return;
+          }
+
+          // Production: only a host adapter's completed result can authorize a credit request.
+          // Demo: simulate completion, with simulated rewards kept in the page only.
+          let completed = window.OracleOctavesDemo === true;
+          const adapter = window.OracleOctavesSearch;
+          if (!completed && adapter && typeof adapter.execute === "function") {
+            const result = await adapter.execute({ query, eventId });
+            completed = result?.completed === true;
+          }
+          if (!completed) {
+            searchStatus.textContent = "Search request sent to host · waiting for verified completion; no quant claimed.";
+            return;
+          }
+          if (!wallet || typeof wallet.creditQuants !== "function") {
+            searchStatus.textContent = "Search completed · wallet not connected; no credit confirmed.";
+            return;
+          }
+          const receipt = await wallet.creditQuants(1, { reason: "search", query, eventId });
+          if (receipt?.credited === true || receipt?.duplicate === true) {
+            if (typeof wallet.getBalance === "function") {
+              try { quantCount.textContent = String(await wallet.getBalance()); }
+              catch { quantCount.textContent = "—"; }
+            }
+            searchStatus.textContent = window.OracleOctavesDemo
+              ? "Demo search · 1 simulated quant recorded (no real wallet credit)."
+              : receipt.credited ? "Search complete · 1 quant confirmed by host receipt." : "Search already recorded · no duplicate quant.";
+          } else {
+            searchStatus.textContent = "Search completed · wallet credit awaiting confirmation.";
+          }
+        } catch {
+          searchStatus.textContent = "Search or wallet operation failed · no credit confirmed.";
+        } finally {
+          searchInFlight = false;
+          button.disabled = false;
         }
       });
 
@@ -342,6 +365,9 @@
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return;
         audioContext ||= new AudioContextClass();
+        if (audioContext.state === "suspended") audioContext.resume().catch(() => {
+          pianoStatus.textContent = "Audio unavailable until playback is allowed by the browser.";
+        });
         const oscillator = audioContext.createOscillator();
         const gain = audioContext.createGain();
         oscillator.type = "sine";
@@ -357,7 +383,7 @@
       function updatePhrase() {
         document.querySelector("#phrase-count").textContent = `${phrase.length} / 5 notes`;
         document.querySelector("#play-phrase").disabled = phrase.length === 0;
-        document.querySelector("#save-phrase").disabled = phrase.length !== 5;
+        document.querySelector("#save-phrase").disabled = phrase.length !== 5 || phraseSaved || phraseSaving;
         const tight = phrase.filter((note) => note.packet === "tight").length;
         const sustained = phrase.length - tight;
         document.querySelector("#packet-summary").textContent = phrase.length
@@ -379,6 +405,8 @@
           packet: durationMs <= 180 ? "tight" : "sustained"
         };
         phrase.push(note);
+        if (phrase.length === 5) phraseEventId = newEventId("music");
+        emit("oracle-octaves:note", note);
         key.classList.add("active");
         window.setTimeout(() => key.classList.remove("active"), 130);
         sound(frequency, note.durationMs);
@@ -395,6 +423,9 @@
 
       document.querySelector("#clear-phrase").addEventListener("click", () => {
         phrase.length = 0;
+        phraseSaved = false;
+        phraseSaving = false;
+        phraseEventId = null;
         pianoStatus.textContent = "Phrase cleared. Choose up to five notes.";
         updatePhrase();
       });
@@ -409,18 +440,43 @@
       });
 
       document.querySelector("#save-phrase").addEventListener("click", async () => {
-        const musicQuant = { notes: phrase.map((note) => ({ ...note })), noteCount: phrase.length };
+        if (phrase.length !== 5 || phraseSaved || phraseSaving) return;
+        phraseSaving = true;
+        updatePhrase();
+        const musicQuant = {
+          notes: phrase.map((note) => ({ ...note })),
+          noteCount: phrase.length,
+          eventId: phraseEventId || newEventId("music")
+        };
         try {
           if (wallet && typeof wallet.recordMusicQuant === "function") {
-            await wallet.recordMusicQuant(musicQuant);
-            pianoStatus.textContent = "Five-note music quant saved to your wallet.";
-            if (typeof wallet.getBalance === "function") quantCount.textContent = String(await wallet.getBalance());
+            const receipt = await wallet.recordMusicQuant(musicQuant);
+            const acknowledged = receipt?.saved === true || receipt?.duplicate === true;
+            if (acknowledged) {
+              phraseSaved = true;
+              pianoStatus.textContent = window.OracleOctavesDemo
+                ? "Five-note phrase saved to mock wallet only · not a real music quant."
+                : receipt.saved ? "Music quant confirmed by the host wallet." : "Music quant already recorded; no duplicate.";
+              if (typeof wallet.getBalance === "function") {
+                try { quantCount.textContent = String(await wallet.getBalance()); } catch {}
+              }
+            } else {
+              pianoStatus.textContent = "Music quant submitted · wallet receipt pending; no credit claimed.";
+            }
+            emit("oracle-octaves:music-quant", {
+              noteCount: 5, eventId: musicQuant.eventId, acknowledged, simulated: window.OracleOctavesDemo === true
+            });
           } else {
-            emit("oracle-octaves:music-quant", musicQuant);
-            pianoStatus.textContent = "Five-note phrase sent to the host · connect a wallet to save it.";
+            emit("oracle-octaves:music-quant", {
+              noteCount: 5, eventId: musicQuant.eventId, acknowledged: false, simulated: false
+            });
+            pianoStatus.textContent = "Phrase sent to the host · connect a wallet to save it.";
           }
         } catch {
-          pianoStatus.textContent = "The wallet could not save this music quant.";
+          pianoStatus.textContent = "The wallet could not confirm this music quant.";
+        } finally {
+          phraseSaving = false;
+          updatePhrase();
         }
       });
 
