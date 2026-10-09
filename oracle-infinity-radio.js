@@ -3,7 +3,7 @@
  */
 (function(w){
  "use strict";
- var PLAYLIST="/infinity-radio/oracle-track-feed.json?v=20261009-library1";
+ var PLAYLIST="https://quantaphi.org/infinity-radio/oracle-track-feed.json?v=20261009-library1";
  var audio=new Audio();
  audio.preload="none";
  var tracks=[],index=0,playing=false,busy=false,session=null,errors=0;
@@ -109,7 +109,7 @@
    session=null;playing=false;
    state.textContent="Track completed";
    ui();
-   if(completed&&w.OracleOctavesWallet?.recordListeningQuant){
+   try { if(completed&&w.OracleOctavesWallet?.recordListeningQuant){
      var receipt=await w.OracleOctavesWallet.recordListeningQuant({
        ...completed,durationSec:Number.isFinite(audio.duration)?Math.round(audio.duration):Math.round(audio.currentTime)
      });
@@ -117,8 +117,13 @@
        receipt.pending?"Full track finished · Music Quant pending Cloudflare wallet confirmation":
        "Full track finished · listening credit unavailable");
    }
-   await changeTrack();
-   await playSelected();
+   } catch(error) {
+     noteText("Track finished · wallet confirmation pending. Playback continues.");
+     console.warn("Listening receipt not confirmed",error);
+   } finally {
+     await changeTrack();
+     await playSelected();
+   }
  });
  audio.addEventListener("error",async()=>{
    if(!audio.src)return;
