@@ -86,7 +86,10 @@
       var local=[...read(LOCAL),...read(LISTENING)];
       if(!local.length)return true;
       for(var i=0;i<local.length;i+=100){
-        await cloud("/v1/music-quants/sync",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({quants:local.slice(i,i+100)})});
+        var batch=local.slice(i,i+100);
+        var receipt=await cloud("/v1/music-quants/sync",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({quants:batch})});
+        var accepted=new Set(receipt.accepted||[]);
+        if(batch.some(function(q){return !accepted.has(q.id)}))throw Error("pending_music_quant_not_accepted");
       }
       var state=await cloud("/v1/music-quants/state",{method:"GET",cache:"no-store"});
       w.dispatchEvent(new CustomEvent("musicquant:cloud-synced",{detail:state}));
