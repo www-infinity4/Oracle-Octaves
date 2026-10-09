@@ -9,7 +9,7 @@
   var LISTENING="musicPhi:listeningQuants:v1";
   var MIDI={C4:60,D4:62,E4:64,G4:67,A4:69};
   var syncing=false;
-  w.QUANTAPHI_SEARCH_URL=w.QUANTAPHI_SEARCH_URL||"/?run=1";
+  w.QUANTAPHI_SEARCH_URL=w.QUANTAPHI_SEARCH_URL||"https://quantaphi.org/?run=1";
   function read(key){try{var v=JSON.parse(w.localStorage.getItem(key)||"[]");return Array.isArray(v)?v:[]}catch(_){return []}}
   function write(key,value){try{w.localStorage.setItem(key,JSON.stringify(value));return true}catch(_){return false}}
   function utf8(s){return new TextEncoder().encode(s)}
@@ -28,11 +28,14 @@
     return payload;
   }
   function normalizeNotes(input){
+    var onset=0;
     return input.map(function(n,i){
       var name=String(n?.note||n?.name||"").slice(0,12),ms=Number(n?.durationMs||n?.holdMs||250);
-      return {name:name,midi:MIDI[name]||Number(n?.midi)||60,
-       holdMs:Math.max(40,Math.min(16000,ms)),offsetMs:0,
-       onsetMs:i*160,group:i};
+      var holdMs=Math.max(40,Math.min(16000,ms));
+      var note={name:name,midi:MIDI[name]||Number(n?.midi)||60,
+       holdMs:holdMs,offsetMs:0,onsetMs:onset,group:i};
+      onset+=holdMs+60;
+      return note;
     });
   }
   async function quantRecord(kind,eventId,params){
