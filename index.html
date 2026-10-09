@@ -223,7 +223,7 @@
           </div>
           <div class="player">
             <button class="transport" id="radio-toggle" type="button" aria-label="Play radio" aria-pressed="false">▶</button>
-            <div><div class="track-title">Octave drift</div><div class="track-meta">Ambient signal · 01:00 loop</div></div>
+            <div><div class="track-title">Octave drift</div><div class="track-meta">Synthesized preview · looping tones</div></div>
             <span class="player-state" id="radio-state">Paused</span>
           </div>
           <div class="wave" aria-hidden="true"><i></i></div>
@@ -480,27 +480,44 @@
         }
       });
 
+      let radioBusy = false;
       document.querySelector("#radio-toggle").addEventListener("click", async (event) => {
+        if (radioBusy) return;
+        radioBusy = true;
         const button = event.currentTarget;
-        radioPlaying = !radioPlaying;
-        button.textContent = radioPlaying ? "Ⅱ" : "▶";
-        button.setAttribute("aria-label", radioPlaying ? "Pause radio" : "Play radio");
-        button.setAttribute("aria-pressed", String(radioPlaying));
-        document.querySelector("#radio-state").textContent = radioPlaying ? "Playing" : "Paused";
-        emit("oracle-octaves:radio", { playing: radioPlaying });
-        if (radioPlaying) {
-          try {
+        const state = document.querySelector("#radio-state");
+        const requestedPlay = !radioPlaying;
+        try {
+          if (requestedPlay) {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContextClass) return;
+            if (!AudioContextClass) throw Error("Browser audio is unavailable");
             audioContext ||= new AudioContextClass();
             await audioContext.resume();
+            if (audioContext.state === "suspended") throw Error("Audio still suspended");
+            radioPlaying = true;
             sound(174.61, 900);
-            radioTimer = window.setInterval(() => sound(220, 900), 1200);
-          } catch {
-            document.querySelector("#radio-state").textContent = "Audio unavailable";
+            const sequence = [220, 261.63, 196, 220, 174.61];
+            let cursor = 0;
+            window.clearInterval(radioTimer);
+            radioTimer = window.setInterval(() => {
+              if (radioPlaying) sound(sequence[cursor++ % sequence.length], 900);
+            }, 1200);
+          } else {
+            radioPlaying = false;
+            window.clearInterval(radioTimer);
           }
-        } else {
+          state.textContent = radioPlaying ? "Playing preview" : "Paused";
+          emit("oracle-octaves:radio", { playing: radioPlaying });
+        } catch {
+          radioPlaying = false;
           window.clearInterval(radioTimer);
+          state.textContent = "Audio unavailable; tap to retry";
+          emit("oracle-octaves:radio", { playing: false });
+        } finally {
+          button.textContent = radioPlaying ? "Ⅱ" : "▶";
+          button.setAttribute("aria-label", radioPlaying ? "Pause radio" : "Play radio");
+          button.setAttribute("aria-pressed", String(radioPlaying));
+          radioBusy = false;
         }
       });
     })();
