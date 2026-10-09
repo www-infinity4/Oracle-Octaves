@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f4f0">
+  <link rel="canonical" href="https://quantaphi.org/oracle-octaves/">
+  <script>
+    // All Phi tools share their existing wallet on the canonical origin.
+    if (location.hostname === "www-infinity4.github.io" && new URLSearchParams(location.search).get("demo") !== "1") {
+      location.replace("https://quantaphi.org/oracle-octaves/" + location.search + location.hash);
+    }
+  </script>
   <title>Oracle Octaves — Resonance workspace</title>
   <style>
     :root {
@@ -177,6 +184,21 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
     }
+    /* Each control takes its intended width; the search input stays usable. */
+    body.oracle-octaves .search-form input { flex:1 1 220px; width:auto; min-width:0; }
+    body.oracle-octaves .search-form .primary { flex:0 0 auto; width:auto; padding:12px 24px; }
+    body.oracle-octaves .player .transport { flex:0 0 44px; width:44px; padding:10px; }
+    body.oracle-octaves .player > div { min-width:0; flex:1; }
+    body.oracle-octaves .track-title { overflow-wrap:break-word; }
+    body.oracle-octaves .player-state { max-width:130px; text-align:right; }
+    @media(max-width:760px) {
+      body.oracle-octaves .search-form input { flex:0 0 auto; width:100%; }
+      body.oracle-octaves .search-form .primary { width:100%; }
+      body.oracle-octaves .radio-controls { grid-template-columns:1fr 1fr; }
+      body.oracle-octaves .radio-controls input { grid-column:2; }
+      body.oracle-octaves .radio-controls a { grid-column:1/-1; }
+      body.oracle-octaves .player-state { max-width:100px; font-size:11px; }
+    }
   </style>
 <link rel="stylesheet" href="https://quantaphi.org/oracle-interface.css?v=20261009-oracle-unified1">
 </head>
@@ -189,13 +211,13 @@
     <main id="workspace">
       <div class="eyebrow">QuantaPhi · resonance layer</div>
       <h1>Find your signal.<br>Set it in motion.</h1>
-      <p class="intro">A cadence-based workspace for search, sound, and small ideas. Search and compose in one focused space, ready to embed in a larger interface.</p>
+      <p class="intro">Search with QuantaPhi, listen to Infinity Radio, and compose five-note Music Quants in one shared workspace.</p>
       <section class="grid" aria-label="Workspace">
         <article class="card oracle-card oracle-card--purple search-card">
           <div class="card-heading">
             <div>
               <h2>QuantaPhi search</h2>
-              <p class="card-copy">Search the signal. Your host application can connect this field to QuantaPhi.</p>
+              <p class="card-copy">Open a live QuantaPhi search. Your query travels with you.</p>
             </div>
             <span class="badge">⌕ &nbsp; Search</span>
           </div>
@@ -263,7 +285,7 @@
           </div>
         </article>
         <article class="card oracle-card oracle-card--blue monitor-card" aria-label="Oracle Monitor">
-          <div class="card-heading"><div><h2>Oracle Monitor</h2><p class="card-copy">Measured signals, event pacing, and packet states. No content leaves this page unless a host telemetry adapter is installed.</p></div><span class="badge" id="monitor-state">Idle</span></div>
+          <div class="card-heading"><div><h2>Oracle Monitor</h2><p class="card-copy">Live search, piano and radio activity, with measured event pacing and packet states.</p></div><span class="badge" id="monitor-state">Idle</span></div>
           <p class="monitor-readout" id="monitor-stats">0 observed · 0 events/sec</p>
           <p class="monitor-readout" id="monitor-latest" role="status" aria-live="polite">Waiting for search, piano, or radio events.</p>
         </article>
@@ -275,27 +297,31 @@
   <script>
   window.OracleOctavesBoot = (async () => {
     if (new URLSearchParams(location.search).get("demo") === "1") return;
+    const origin = "https://quantaphi.org";
+    const failures = [];
     const sources = [
       "/cloud-wallet-client.js?v=20261005-legacy-floor2",
       "/TV-Database/js/auth.js",
       "/TV-Database/js/starquest-cloud-ledger.js?v=20261004-wallet-recovery2",
-      "/wallet-runtime.js?v=20261008-spinwallet5",
-      "./oracle-phi-bridge.js?v=20261009-shared1"
+      "/wallet-runtime.js?v=20261009-octaves-routing6",
+      "./oracle-phi-bridge.js?v=20261009-origin-timing2"
     ];
     for (const source of sources) {
-      await new Promise((resolve,reject) => {
+      try { await new Promise((resolve,reject) => {
         const script = document.createElement("script");
-        script.src = source;
+        script.src = source.startsWith("/") ? origin + source : source;
         if (source.includes("wallet-runtime.js")) script.dataset.controlPhiWalletOnly = "true";
         script.onload = resolve;
         script.onerror = () => reject(Error("Script unavailable: " + source));
         document.head.appendChild(script);
-      });
+      }); } catch (error) { failures.push(source); console.warn("Oracle service load failed", source, error); }
     }
+    window.OracleOctavesServiceFailures = failures;
+    return { failures };
   })();
   </script>
   <script src="./oracle-monitor.js"></script>
-  <script src="./oracle-infinity-radio.js?v=20261009-real1"></script>
+  <script src="./oracle-infinity-radio.js?v=20261009-resilient2"></script>
   <script>
     window.OracleOctavesBoot.catch(error => {
       console.warn("The unified Phi wallet adapter is unavailable",error);
