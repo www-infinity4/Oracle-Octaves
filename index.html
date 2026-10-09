@@ -272,8 +272,34 @@
     <footer>Oracle Octaves · A modular resonance workspace</footer>
   </div>
   <script src="./oracle-mock.js"></script>
-  <script src="./oracle-monitor.js"></script>
   <script>
+  window.OracleOctavesBoot = (async () => {
+    if (new URLSearchParams(location.search).get("demo") === "1") return;
+    const sources = [
+      "/cloud-wallet-client.js?v=20261005-legacy-floor2",
+      "/TV-Database/js/auth.js",
+      "/TV-Database/js/starquest-cloud-ledger.js?v=20261004-wallet-recovery2",
+      "/wallet-runtime.js?v=20261008-spinwallet5",
+      "./oracle-phi-bridge.js?v=20261009-shared1"
+    ];
+    for (const source of sources) {
+      await new Promise((resolve,reject) => {
+        const script = document.createElement("script");
+        script.src = source;
+        if (source.includes("wallet-runtime.js")) script.dataset.controlPhiWalletOnly = "true";
+        script.onload = resolve;
+        script.onerror = () => reject(Error("Script unavailable: " + source));
+        document.head.appendChild(script);
+      });
+    }
+  })();
+  </script>
+  <script src="./oracle-monitor.js"></script>
+  <script src="./oracle-infinity-radio.js?v=20261009-real1"></script>
+  <script>
+    window.OracleOctavesBoot.catch(error => {
+      console.warn("The unified Phi wallet adapter is unavailable",error);
+    }).finally(() => {
     (() => {
       const wallet = window.OracleOctavesWallet;
       const walletState = document.querySelector("#wallet-state");
@@ -292,14 +318,30 @@
       const newEventId = (type) => `${type}:${window.crypto?.randomUUID?.() || `${Date.now()}-${++lastEventSerial}-${Math.random().toString(36).slice(2)}`}`;
 
       if (wallet && typeof wallet.getBalance === "function") {
-        walletState.textContent = window.OracleOctavesDemo ? "●  DEMO wallet" : "●  Connected";
+        walletState.textContent = window.OracleOctavesDemo ? "●  DEMO wallet" : "●  Connecting";
         Promise.resolve().then(() => wallet.getBalance()).then((balance) => {
           quantCount.textContent = String(balance);
+          walletState.textContent = window.OracleOctavesDemo ? "●  DEMO wallet" : "●  Cloud connected";
         }).catch(() => {
+          walletState.textContent = window.OracleOctavesDemo ? "●  DEMO wallet" : "○ Wallet not connected";
           quantCount.textContent = "—";
         });
       }
 
+      if (wallet?.getMusicBalance) {
+        const refreshMusic = () => wallet.getMusicBalance().then(balance => {
+          document.querySelector("#music-count").textContent = String(balance);
+        }).catch(() => {document.querySelector("#music-count").textContent = "—";});
+        void refreshMusic();
+        window.addEventListener("musicquant:cloud-synced",refreshMusic);
+        document.addEventListener("starquest:ledger-connected", () => {
+          void refreshMusic();
+          wallet.getBalance().then(balance => {
+            quantCount.textContent = String(balance);
+            walletState.textContent = "●  Cloud connected";
+          }).catch(() => {});
+        });
+      } else if (window.OracleOctavesDemo) document.querySelector("#music-count").textContent = "DEMO";
       const emit = (name, detail) => {
         window.dispatchEvent(new CustomEvent(name, { detail }));
       };
@@ -489,6 +531,7 @@
       });
 
     })();
+    });
   </script>
 </body>
 </html>
