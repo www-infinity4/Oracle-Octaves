@@ -1,8 +1,8 @@
 # Oracle Octaves
 
-An embeddable search, audio and five-note Music Quant workspace with a passive
-**Oracle Monitor**. Open `index.html` in a browser. No package manager,
-accounts, API keys, or build step are required for the local preview.
+Oracle Octaves is a real Phi workspace hosted at **https://quantaphi.org/oracle-octaves/**. It uses the same first-party wallet as QuantaPhi and the unified Infinity Phi-style Oracle cards and rounded button system. Five-note piano Quants and completed Infinity Radio listening tracks use authenticated Cloudflare music-quant receipts.
+
+The original demo remains at **https://quantaphi.org/oracle-octaves/?demo=1**. Demo credits stay in memory and never touch the real wallet.
 
 ## Try the safe mock integration
 
@@ -118,10 +118,11 @@ longer preview tones. `Play phrase` sequences the five captured tones;
 A second click on a confirmed saved phrase is disabled until **Clear**; retrying
 an unconfirmed phrase reuses the same event ID.
 
-Infinity Radio here remains an **on-device synthesized preview**, not the live
-Infinity Radio stream. The host can use `oracle-octaves:radio` to connect real
-streaming playback. Audio autoplay restrictions can require a user tap.
+Infinity Radio now plays the **actual classical-piano recordings** from the established Infinity Radio playlist. `/infinity-radio/oracle-track-feed.json` is generated from the source station's 24-track library; the player uses a real browser audio element and advances through tracks. If a track host blocks playback, it shows an error instead of playing a pretend synth loop. A listening Music Quant is submitted only when the browser reports an entire track completed; no listening credit is claimed on play, refresh, or error.
+
+The five-key piano remains its own Web Audio instrument. A completed five-note phrase creates a stable receipt ID, five note events (name, MIDI, hold duration and onset), and a SHA-256 provenance hash. The first-party wallet bridge submits this Music Quant to Cloudflare `/v1/music-quants/sync`. Only an accepted ID is confirmed; otherwise it stays pending locally and is retried through the same wallet. The full unified wallet panel is shared with QuantaPhi and Infinity Radio.
+
+Production searches open QuantaPhi with the entered query, where a completed verified search is handled. Navigation itself does not mint. The adapter never claims that clicking Search has credited a Quant.
 
 The advertisement area is an unconnected host placement; the preview does not
-load ad tracking code. Real QuantaPhi, Infinity Radio, D1, and wallet services
-remain separate integrations rather than assumed live connections.
+load ad tracking code. Authenticated Phi wallet, Infinity Radio feed and Music Quant D1 receipt routes are configured in production. Availability and balances must still be verified with an enrolled user account; standalone previews cannot prove wallet crediting.
