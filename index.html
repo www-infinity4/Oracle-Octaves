@@ -191,7 +191,7 @@
       <h1>Find your signal.<br>Set it in motion.</h1>
       <p class="intro">A cadence-based workspace for search, sound, and small ideas. Search and compose in one focused space, ready to embed in a larger interface.</p>
       <section class="grid" aria-label="Workspace">
-        <article class="card search-card">
+        <article class="card oracle-card oracle-card--purple search-card">
           <div class="card-heading">
             <div>
               <h2>QuantaPhi search</h2>
@@ -201,39 +201,48 @@
           </div>
           <form class="search-form" id="search-form">
             <input id="search-query" type="search" placeholder="What are you looking for?" aria-label="Search QuantaPhi" required>
-            <button class="primary" type="submit">Search <span aria-hidden="true">→</span></button>
+            <button class="primary oracle-action oracle-action--primary" type="submit">Search <span aria-hidden="true">→</span></button>
           </form>
           <p class="status" id="search-status" role="status" aria-live="polite">One quant is credited for a search when a wallet is connected.</p>
         </article>
-        <article class="card wallet-card">
+        <article class="card oracle-card oracle-card--blue wallet-card">
           <div class="card-heading">
             <div>
               <h2>Unified wallet</h2>
               <p class="card-copy">Your search and music quants, in one place.</p>
             </div>
-            <span class="badge" id="wallet-state">○ &nbsp; Not connected</span>
+            <span class="badge" id="wallet-state">○ &nbsp; Checking wallet</span>
           </div>
           <div class="quant-number" id="quant-count">—</div>
-          <div class="wallet-label">available quants</div>
-          <p class="wallet-note">Connect the host wallet to receive search credits and record music quants. No balance is simulated here.</p>
+          <div class="wallet-label">Cloudflare Quants</div>
+          <div class="wallet-asset-row"><strong id="music-count">—</strong><span>Music Quants</span></div>
+          <div class="wallet-trigger-row" data-control-phi-wallet-host></div>
+          <p class="wallet-note">The same unified wallet used across QuantaPhi and Infinity Radio. Balances require authenticated ledger responses.</p>
         </article>
-        <article class="card radio-card">
+        <article class="card oracle-card oracle-card--yellow radio-card">
           <div class="card-heading">
-            <div><h2>Infinity Radio</h2><p class="card-copy">A quiet listening space for your current cadence.</p></div>
+            <div><h2>Infinity Radio</h2><p class="card-copy">Real piano recordings from the Infinity Radio library, with the next track played inside this card.</p></div>
             <span class="badge">RADIO</span>
           </div>
           <div class="player">
-            <button class="transport" id="radio-toggle" type="button" aria-label="Play radio" aria-pressed="false">▶</button>
-            <div><div class="track-title">Octave drift</div><div class="track-meta">Synthesized preview · looping tones</div></div>
+            <button class="transport oracle-action oracle-action--primary" id="radio-toggle" type="button" aria-label="Play Infinity Radio" aria-pressed="false">▶</button>
+            <div><div class="track-title" id="octaves-track-title">Infinity Radio · Piano</div><div class="track-meta" id="octaves-track-meta">Loading the real piano library</div></div>
             <span class="player-state" id="radio-state">Paused</span>
           </div>
+          <div class="radio-controls">
+            <button type="button" id="radio-next" class="secondary oracle-action" disabled>Next track</button>
+            <label for="octaves-volume">Volume</label>
+            <input id="octaves-volume" type="range" min="0" max="100" value="70" aria-label="Radio volume">
+            <a href="/infinity-radio/" class="secondary oracle-action">Full Infinity Radio</a>
+          </div>
+          <p class="status" id="radio-credit-note" role="status">A listening Music Quant is submitted only when a real track completes.</p>
           <div class="wave" aria-hidden="true"><i></i></div>
           <div class="ad-slot" aria-label="Advertisement area">
             <div><strong>Resonance partner</strong><span>Sponsored messages can appear here.</span></div>
             <span class="ad-tag">AD</span>
           </div>
         </article>
-        <article class="card piano-card">
+        <article class="card oracle-card oracle-card--purple piano-card">
           <div class="card-heading">
             <div><h2>Quant piano</h2><p class="card-copy">Compose a five-note phrase. Short notes become tight packets; long notes are held as sustained packets.</p></div>
             <span class="badge" id="phrase-count">0 / 5 notes</span>
@@ -246,14 +255,14 @@
             <button class="key" type="button" data-note="A4" data-frequency="440" aria-label="Play A4">A<small>G</small></button>
           </div>
           <div class="piano-controls">
-            <button class="secondary" id="play-phrase" type="button" disabled>▶ Play phrase</button>
-            <button class="secondary" id="save-phrase" type="button" disabled>Save music quant</button>
-            <button class="secondary" id="clear-phrase" type="button">Clear</button>
+            <button class="secondary oracle-action" id="play-phrase" type="button" disabled>▶ Play phrase</button>
+            <button class="secondary oracle-action" id="save-phrase" type="button" disabled>Save music quant</button>
+            <button class="secondary oracle-action" id="clear-phrase" type="button">Clear</button>
             <span class="phrase" id="packet-summary">No notes recorded</span>
             <p class="status" id="piano-status" role="status" aria-live="polite">Choose notes with the keys or A, S, D, F, G.</p>
           </div>
         </article>
-        <article class="card monitor-card" aria-label="Oracle Monitor">
+        <article class="card oracle-card oracle-card--blue monitor-card" aria-label="Oracle Monitor">
           <div class="card-heading"><div><h2>Oracle Monitor</h2><p class="card-copy">Measured signals, event pacing, and packet states. No content leaves this page unless a host telemetry adapter is installed.</p></div><span class="badge" id="monitor-state">Idle</span></div>
           <p class="monitor-readout" id="monitor-stats">0 observed · 0 events/sec</p>
           <p class="monitor-readout" id="monitor-latest" role="status" aria-live="polite">Waiting for search, piano, or radio events.</p>
@@ -276,8 +285,6 @@
       const keys = [...document.querySelectorAll(".key")];
       const phrase = [];
       let audioContext;
-      let radioTimer;
-      let radioPlaying = false;
       let phraseEventId = null;
       let phraseSaved = false;
       let phraseSaving = false;
@@ -481,46 +488,6 @@
         }
       });
 
-      let radioBusy = false;
-      document.querySelector("#radio-toggle").addEventListener("click", async (event) => {
-        if (radioBusy) return;
-        radioBusy = true;
-        const button = event.currentTarget;
-        const state = document.querySelector("#radio-state");
-        const requestedPlay = !radioPlaying;
-        try {
-          if (requestedPlay) {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContextClass) throw Error("Browser audio is unavailable");
-            audioContext ||= new AudioContextClass();
-            await audioContext.resume();
-            if (audioContext.state === "suspended") throw Error("Audio still suspended");
-            radioPlaying = true;
-            sound(174.61, 900);
-            const sequence = [220, 261.63, 196, 220, 174.61];
-            let cursor = 0;
-            window.clearInterval(radioTimer);
-            radioTimer = window.setInterval(() => {
-              if (radioPlaying) sound(sequence[cursor++ % sequence.length], 900);
-            }, 1200);
-          } else {
-            radioPlaying = false;
-            window.clearInterval(radioTimer);
-          }
-          state.textContent = radioPlaying ? "Playing preview" : "Paused";
-          emit("oracle-octaves:radio", { playing: radioPlaying });
-        } catch {
-          radioPlaying = false;
-          window.clearInterval(radioTimer);
-          state.textContent = "Audio unavailable; tap to retry";
-          emit("oracle-octaves:radio", { playing: false });
-        } finally {
-          button.textContent = radioPlaying ? "Ⅱ" : "▶";
-          button.setAttribute("aria-label", radioPlaying ? "Pause radio" : "Play radio");
-          button.setAttribute("aria-pressed", String(radioPlaying));
-          radioBusy = false;
-        }
-      });
     })();
   </script>
 </body>
