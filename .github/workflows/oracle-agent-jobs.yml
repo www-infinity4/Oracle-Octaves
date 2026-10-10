@@ -1,0 +1,21 @@
+name: Oracle agent job triage
+on:
+  issues:
+    types: [opened, reopened, labeled]
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  route:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Route Moltnook agent jobs with source evidence
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/oracle-agent-triage.mjs
