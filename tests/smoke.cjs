@@ -6,8 +6,10 @@ async function main() {
   const html = fs.readFileSync("index.html", "utf8");
   const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
     .map((match) => match[1].trim()).filter(Boolean);
-  assert.equal(scripts.length, 1, "The workspace should have exactly one inline app script");
-  new vm.Script(scripts[0], { filename: "index.html:inline" });
+  assert.ok(scripts.length >= 1, "The workspace must contain a parseable app script");
+  // The page now has separate canonical-redirect, service-bootstrap, and app scripts.
+  // Check all inline code instead of assuming there can be only one script tag.
+  scripts.forEach((source, index) => new vm.Script(source, { filename: "index.html:inline:" + (index + 1) }));
   for (const file of ["oracle-mock.js", "oracle-monitor.js"]) {
     assert.ok(html.includes('src="./' + file + '"'), file + " must be included");
     new vm.Script(fs.readFileSync(file, "utf8"), { filename: file });
