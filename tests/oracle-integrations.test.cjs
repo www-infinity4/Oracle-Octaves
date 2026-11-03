@@ -43,3 +43,12 @@ test('Production scripts are disabled in explicit demo mode',()=>{
  assert.match(html,/cloud-wallet-client\.js/);
  assert.match(html,/wallet-runtime\.js/);
 });
+
+test('Oracle radio uses the cumulative 274-song snapshot if moving feed lags',()=>{
+ const player=read('oracle-infinity-radio.js');
+ assert.match(player,/VERIFIED_SNAPSHOT/);
+ assert.match(player,/published\.length<274/);
+ assert.match(player,/byUrl\.has\(entry\.url\)/);
+ assert.match(player,/tracks=published/);
+ assert.match(read('index.html'),/oracle-infinity-radio\.js\?v=20261102-274-tracks1/);
+});

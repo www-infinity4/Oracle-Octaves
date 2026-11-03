@@ -3,7 +3,8 @@
  */
 (function(w){
  "use strict";
- var PLAYLIST="https://quantaphi.org/infinity-radio/oracle-track-feed.json?v=20261009-library1";
+ var PLAYLIST="https://quantaphi.org/infinity-radio/oracle-track-feed.json?v=20261102-274";
+ var VERIFIED_SNAPSHOT="https://raw.githubusercontent.com/www-infinity4/Alien-Radio/2a9476cf50fe8c2a2a2f7aa6a4d6ce27ab6aae66/oracle-track-feed.json";
  var audio=new Audio();
  audio.preload="none";
  var tracks=[],index=0,playing=false,busy=false,session=null,errors=0;
@@ -37,7 +38,24 @@
      var response=await fetch(PLAYLIST,{cache:"no-store"});
      if(!response.ok)throw Error("library HTTP "+response.status);
      var data=await response.json();
-     tracks=(Array.isArray(data.tracks)?data.tracks:[]).filter(validTrack);
+     var published=(Array.isArray(data.tracks)?data.tracks:[]).filter(validTrack);
+     if(published.length<274){
+       try{
+         var stable=await fetch(VERIFIED_SNAPSHOT,{cache:"no-store"});
+         if(stable.ok){
+           var snapshot=await stable.json();
+           if(Array.isArray(snapshot.tracks)&&snapshot.tracks.length>=274){
+             var byUrl=new Set(),joined=[];
+             for(const entry of [...snapshot.tracks,...published]){
+               if(!validTrack(entry)||byUrl.has(entry.url))continue;
+               byUrl.add(entry.url);joined.push(entry);
+             }
+             published=joined;
+           }
+         }
+       }catch(error){console.warn("Verified radio snapshot deferred",error)}
+     }
+     tracks=published;
      if(!tracks.length)throw Error("no_valid_tracks");
      state.textContent="Ready · real piano tracks";
      noteText("Opt-in playback. Music Quants are recorded only after an entire track finishes.");
